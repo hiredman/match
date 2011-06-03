@@ -1,0 +1,34 @@
+# match
+
+provides analogs to fn and defn for functions that pattern match on the actual
+parameters to select a body to execute
+
+## Usage
+
+match.core> ((mn [] (println :foo)
+                 [?a] (println a)
+                 [?a ?b] (println a b)))
+:foo
+nil
+match.core> ((mn [] (println :foo)
+                 [?a] (println a)
+                 [?a ?b] (println a b)) 1)
+1
+nil
+match.core> ((mn [] (println :foo)
+                 [?a] (println a)
+                 [?a ?b] (println a b)) [1 2])
+[1 2]
+nil
+match.core> ((mn [] (println :foo)
+                 [?a] (println a)
+                 [?a ?b] (println a b)) 1 2)
+1 2
+nil
+match.core> 
+
+## License
+
+Copyright (C) 2011 Kevin Downey
+
+Distributed under the Eclipse Public License, the same as Clojure.
