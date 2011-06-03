@@ -2,20 +2,20 @@
   (:use [clojure.core.logic.unify :only [unifier unifier* binding-map
                                          binding-map* prep replace-lvar
                                          lvarq-sym? rem-?]]
-        [clojure.walk :only [postwalk]])
+        [clojure.walk :only [postwalk prewalk]])
   (:require [clojure.core.logic.minikanren :as mk]))
 
 (defmacro cond-let [[name value] & body]
-    `(let [~name ~value]
-       ~((reduce
-          (fn [fun [condition expr]]
-             (fn [else]
-               (fun
-                `(if-let [~name ~condition]
-                   ~expr
-                   ~else))))
-           identity
-           (partition-all 2 body)) nil)))
+  `(let [~name ~value]
+     ~((reduce
+        (fn [fun [condition expr]]
+          (fn [else]
+            (fun
+             `(if-let [~name ~condition]
+                ~expr
+                ~else))))
+        identity
+        (partition-all 2 body)) nil)))
 
 (defn emittable [expr]
   (postwalk
@@ -65,7 +65,7 @@
                      x)))))
 
 ;; TODO: do branching, e.g. instead of building a vector and trying to
-;; unify try and unify the first arg, then the second, then the third,
+;; unify try and unify the first arg, then the second, then the third
 ;; merge the binding maps, may require changes to cond-m instead of
 ;; nm2
 ;; maybe cond-m-tree
@@ -83,19 +83,19 @@
             (let [args (vec (take arity (repeatedly (partial gensym 'arg))))]
               `(~args (cond-m ~args
                               ~@(apply concat clauses)
-                              ?# (throw
-                                  (IllegalArgumentException.
-                                   "no matching clause"))))))]
+                              '?# (throw
+                                   (IllegalArgumentException.
+                                    "no matching clause"))))))]
     `(fn* ~fn-name ~@m)))
 
 (defmacro defmn [name doc-string? & body]
   (let [[doc-string body] (if (string? doc-string?)
                             [doc-string? body]
                             [nil (cons doc-string? body)])]
-    `(def ~(vary-meta name assoc :doc doc-string) (mn ~@body))))
+    `(def ~(vary-meta name assoc :doc doc-string) (mn ~name ~@body))))
 
 (defmn secd
-  "executes a primitve secd machine, takes a data stack, environment map,
+  "executes a primitve secd machine, takes a data stack, environment map
   control stack, and dump stack"
   [(?v . nil) ?e' () ()]
   v
@@ -135,24 +135,15 @@
         )
   ;; => [:int 2]
 
-  ((mn
-    [?a] (println a)
-    [?a ?b] (println a b))
-   1 2)
-
-  (cond-let [name init]
-            som)
-
-  (defmacro cond-let [[name value] & body]
-    `(let [~name ~value]
-       ~((reduce
-          (fn [fun [condition expr]]
-             (fn [else]
-               (fun
-                `(if-let [~name ~condition]
-                   ~expr
-                   ~else))))
-           identity
-           (partition-all 2 body)) nil)))
+  (prewalk
+   (fn [form]
+     (let [nform (macroexpand form)]
+       (if (= nform form)
+         form
+         (recur nform))))
+   '((mn
+      [?a] (println a)
+      [?a ?b] (println a b))
+     1 2))
 
   )
