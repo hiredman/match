@@ -5,24 +5,17 @@
         [clojure.walk :only [postwalk]])
   (:require [clojure.core.logic.minikanren :as mk]))
 
-;;borrowed from contrib, thanks steve
-(defmacro cond-let
-  "Takes a binding-form and a set of test/expr pairs. Evaluates each test
-one at a time. If a test returns logical true, cond-let evaluates and
-returns expr with binding-form bound to the value of test and doesn't
-evaluate any of the other tests or exprs. To provide a default value
-either provide a literal that evaluates to logical true and is
-binding-compatible with binding-form, or use :else as the test and don't
-refer to any parts of binding-form in the expr. (cond-let binding-form)
-returns nil."
-  [bindings & clauses]
-  (let [binding (first bindings)]
-    (when-let [[test expr & more] clauses]
-      (if (= test :else)
-        expr
-        `(if-let [~binding ~test]
-           ~expr
-           (cond-let ~bindings ~@more))))))
+(defmacro cond-let [[name value] & body]
+    `(let [~name ~value]
+       ~((reduce
+          (fn [fun [condition expr]]
+             (fn [else]
+               (fun
+                `(if-let [~name ~condition]
+                   ~expr
+                   ~else))))
+           identity
+           (partition-all 2 body)) nil)))
 
 (defn emittable [expr]
   (postwalk
@@ -146,5 +139,20 @@ returns nil."
     [?a] (println a)
     [?a ?b] (println a b))
    1 2)
+
+  (cond-let [name init]
+            som)
+
+  (defmacro cond-let [[name value] & body]
+    `(let [~name ~value]
+       ~((reduce
+          (fn [fun [condition expr]]
+             (fn [else]
+               (fun
+                `(if-let [~name ~condition]
+                   ~expr
+                   ~else))))
+           identity
+           (partition-all 2 body)) nil)))
 
   )
